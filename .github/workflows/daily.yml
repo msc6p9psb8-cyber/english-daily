@@ -1,0 +1,62 @@
+name: Daily English News
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # UTC 01:00 = Beijing 09:00
+    - cron: '0 3 * * *'   # UTC 03:00 = Beijing 11:00 (second attempt)
+  workflow_dispatch: {}    # allow manual trigger from GitHub web UI
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-news
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check today's status
+        id: status
+        run: |
+          if python update_news.py --status; then
+            echo "need=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "need=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch live news
+        if: steps.status.outputs.need == '1'
+        run: |
+          if ! python fetch_news.py; then
+            echo "Fetch failed, falling back to offline template content"
+            python update_news.py --ensure || true
+          fi
+
+      - name: Inject live news into page
+        if: steps.status.outputs.need == '1'
+        run: |
+          if [ -f /tmp/live_news.json ]; then
+            python update_news.py --inject /tmp/live_news.json
+          else
+            echo "No live_news.json, skipping inject (ensure already ran)"
+          fi
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "daily: $(date -u +%Y-%m-%d) news update"
+            git push
+          fi
