@@ -5641,6 +5641,20 @@ if (elDetail) elDetail.addEventListener('click', function(e) {
   // 主入口：抓取当日真实新闻
   window.fetchLiveNewsFrontend = function (force) {
     var today = todayStr();
+    // 【外置数据优先】当天已有 ≥3 条 live 真实新闻（来自 data/news-*.js 外置数据文件
+    // 或 index.html 内联注入）时，前端抓取已冗余 —— 直接跳过，不显示误导性的
+    // “抓取中”，避免依赖不稳定的第三方 CORS 代理导致状态条卡住。
+    try {
+      if (!force && state && Array.isArray(state.news)) {
+        var liveToday = state.news.filter(function (n) {
+          return n && n.date === today && n.source_type === 'live';
+        });
+        if (liveToday.length >= 3) {
+          setFrontStatus('✅ 今日真实新闻已加载（外置数据）', 'ok');
+          return;
+        }
+      }
+    } catch (e) {}
     // 缓存：非强制时当天已成功抓过则跳过
     if (!force) {
       try {
