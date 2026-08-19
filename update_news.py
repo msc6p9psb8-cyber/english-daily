@@ -2511,6 +2511,82 @@ def _remove_today_entries(html, today_str):
     return html, (n1, n2, n3)
 
 
+def write_external_data(articles, today_str):
+    """Write versioned external data files so the front-end can always load the
+    latest day's news even when index.html is served from a stale cache.
+
+    Produces, next to index.html:
+      data/news-YYYY-MM-DD.js   ->  window.__LIVE_NEWS__['YYYY-MM-DD'] = {...}
+      data/news-manifest.js     ->  window.__NEWS_MANIFEST__ = ['YYYY-MM-DD', ...]
+
+    Filenames embed the date, so each day's URL is unique and never hits a
+    cached copy. The page's JS reads todayStr() and loads today + recent days.
+    """
+    import json as _json
+
+    data_dir = os.path.join(_SCRIPT_DIR, "data")
+    os.makedirs(data_dir, exist_ok=True)
+
+    # ---- 1. Build the day's payload (articles with full vocab/grammar/slang) ----
+    day = {
+        "date": today_str,
+        "articles": [],
+    }
+    for idx, article in enumerate(articles):
+        _enrich_article_points(article)
+        day["articles"].append({
+            "id": f"n{int(time.time())}_{idx}",
+            "date": article.get("date", today_str),
+            "source": article.get("source", ""),
+            "country": article.get("country", ""),
+            "title": article.get("title", ""),
+            "summary": article.get("summary", ""),
+            "body": article.get("body", ""),
+            "url": article.get("url", ""),
+            "source_type": "live",
+            "vocabPoints": article.get("vocabPoints", []),
+            "grammarPoints": article.get("grammarPoints", []),
+            "slangPoints": article.get("slangPoints", []),
+        })
+
+    # ---- 2. Serialize with JSON (safe escaping; JSON string literals are valid JS) ----
+    payload_json = _json.dumps(day, ensure_ascii=False, separators=(",", ":"))
+    # guard against a stray </script> sequence inside article body text
+    payload_json = payload_json.replace("</script>", "<\\/script>")
+
+    day_key = today_str
+    day_file = os.path.join(data_dir, f"news-{today_str}.js")
+    with open(day_file, "w", encoding="utf-8") as f:
+        f.write("window.__LIVE_NEWS__ = window.__LIVE_NEWS__ || {};\n")
+        f.write(f"window.__LIVE_NEWS__[{_json.dumps(day_key)}] = {payload_json};\n")
+    print(f"  DATA: wrote {day_file}")
+
+    # ---- 3. Maintain manifest of recent dates (descending, newest first) ----
+    manifest_path = os.path.join(data_dir, "news-manifest.js")
+    manifest = []
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            old = f.read()
+        import re as _re
+        m = _re.search(r"window\.__NEWS_MANIFEST__\s*=\s*(\[[^\]]*\])", old)
+        if m:
+            manifest = _json.loads(m.group(1).replace("'", '"'))
+    except Exception:
+        pass
+
+    if today_str not in manifest:
+        manifest.append(today_str)
+    # keep only the most recent 14 days (newest first)
+    manifest = sorted(manifest, reverse=True)[:14]
+
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        f.write("window.__NEWS_MANIFEST__ = ")
+        f.write(_json.dumps(manifest, ensure_ascii=False))
+        f.write(";\n")
+    print(f"  DATA: manifest has {len(manifest)} dates: {manifest[:5]}...")
+    return 0
+
+
 def inject_live_news(json_path, force=False):
     """Inject REAL news (fetched via WebFetch from RSS) into the page.
     Articles get source_type='live'. Idempotent: skips if today already has
@@ -2673,6 +2749,15 @@ def inject_live_news(json_path, force=False):
 
     with open(HTML_FILE, "w", encoding="utf-8") as f:
         f.write(html)
+
+    # ===== 版本化外置数据文件（彻底解决浏览器/CDN 缓存旧 HTML 的问题）=====
+    # 每天生成 data/news-YYYY-MM-DD.js（文件名含日期 → URL 唯一 → 永不命中缓存）。
+    # 前端用 todayStr() 动态加载当天 + 最近几天的数据文件，因此即使 index.html 被
+    # 缓存成旧版，只要 JS 逻辑在，就一定能加载到当天最新新闻（含全文 body）。
+    try:
+        write_external_data(articles, today_str)
+    except Exception as e:
+        print(f"WARN: write_external_data failed: {e}", file=sys.stderr)
 
     print(f"INJECT OK: {len(articles)} live articles injected for {today_str} from {sources}")
     print("Titles:")
@@ -2865,6 +2950,125 @@ def reextract_mode():
     return inject_live_news(tmp)
 
 
+def export_data_mode():
+    """(Re)generate the versioned external data files for today from the news
+    already embedded in the HTML's getDefaultNews() array.
+
+    Why this exists: inject_live_news early-returns (idempotent guard) before
+    reaching write_external_data once today already has >=5 live entries. So a
+    re-run of the daily workflow would NOT refresh the data files. This mode
+    runs every day (regardless of whether injection was skipped) so the
+    versioned data files always exist on GitHub Pages.
+
+    The HTML stores news as hand-written JS object literals, so we use Node to
+    evaluate getDefaultNews() and extract today's 'live' articles — far more
+    robust than regex-parsing the literal back into Python dicts.
+    """
+    from datetime import datetime
+    import subprocess
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    with open(HTML_FILE, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    # --- 1. Extract the getDefaultNews function body ---
+    fn_start = html.find("function getDefaultNews")
+    if fn_start == -1:
+        print("EXPORT FAIL: cannot find getDefaultNews in HTML")
+        return 1
+    # find the closing brace of the function: the "return [ ... ];" then "}"
+    arr_marker = "  return [\n"
+    arr_idx = html.find(arr_marker, fn_start)
+    if arr_idx == -1:
+        arr_marker = "  return ["
+        arr_idx = html.find(arr_marker, fn_start)
+    if arr_idx == -1:
+        print("EXPORT FAIL: cannot find getDefaultNews return array")
+        return 1
+    # The array ends at the first "  ];\n}\n" after the marker (that is the end
+    # of the function, since getDefaultNews is followed by getDefaultVocab).
+    arr_start = arr_idx + len(arr_marker)
+    end_marker = "  ];\n}\n"
+    arr_end = html.find(end_marker, arr_start)
+    if arr_end == -1:
+        end_marker = "  ];"
+        arr_end = html.find(end_marker, arr_start)
+    if arr_end == -1:
+        print("EXPORT FAIL: cannot find end of getDefaultNews array")
+        return 1
+
+    array_js = html[arr_start:arr_end].strip()
+
+    # --- 2. Evaluate via Node ---
+    node_bin = None
+    for cand in (
+        "/Users/liuyang/.workbuddy/binaries/node/versions/22.22.2/bin/node",
+        "node",
+    ):
+        try:
+            subprocess.run([cand, "-v"], capture_output=True, check=True)
+            node_bin = cand
+            break
+        except Exception:
+            continue
+    if not node_bin:
+        print("EXPORT FAIL: node not available to evaluate getDefaultNews")
+        return 1
+
+    js_prog = (
+        "const items = [\n" + array_js + "\n];\n"
+        "const filtered = items.filter(function(a){"
+        "return a && a.source_type === 'live';});\n"
+        "console.log(JSON.stringify(filtered));"
+    )
+    try:
+        r = subprocess.run([node_bin, "-e", js_prog],
+                           capture_output=True, text=True, timeout=60)
+    except Exception as e:
+        print(f"EXPORT FAIL: node evaluate error: {e}")
+        return 1
+    if r.returncode != 0:
+        print("EXPORT FAIL: node stderr:", r.stderr.strip()[:500])
+        return 1
+
+    try:
+        articles = json.loads(r.stdout.strip().splitlines()[-1])
+    except Exception as e:
+        print(f"EXPORT FAIL: cannot parse node output: {e}")
+        return 1
+
+    # --- 3. Prefer today's live articles; else fall back to the most recent
+    # available live day (handles the transition day before the first daily
+    # injection lands, so the page still has content to show). ---
+    today_articles = [a for a in articles if a.get("date") == today_str]
+    if not today_articles:
+        # most recent live date present in the HTML
+        dates = sorted({a.get("date") for a in articles if a.get("date")},
+                       reverse=True)
+        recent = dates[0] if dates else today_str
+        today_articles = [a for a in articles if a.get("date") == recent]
+        if today_articles:
+            print(f"EXPORT NOTE: no live news for {today_str}; "
+                  f"exporting most recent live day {recent} "
+                  f"({len(today_articles)} articles)")
+            # Write under today's filename too so the front-end (which always
+            # loads todayStr()) finds content immediately.
+            write_external_data(today_articles, today_str)
+            write_external_data(today_articles, recent)
+            return 0
+        # No live news at all yet
+        print(f"EXPORT SKIP: no live news in HTML; writing empty today file")
+        write_external_data([], today_str)
+        return 0
+
+    write_external_data(today_articles, today_str)
+    print(f"EXPORT OK: {len(today_articles)} today-live articles -> data files")
+    for a in today_articles:
+        print(f"  - [{a.get('source')}] {a.get('title')}")
+    return 0
+
+
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--auto":
         auto_mode()
@@ -2874,6 +3078,8 @@ if __name__ == "__main__":
         sys.exit(ensure_mode())
     elif len(sys.argv) >= 2 and sys.argv[1] == "--status":
         sys.exit(status_mode())
+    elif len(sys.argv) >= 2 and sys.argv[1] == "--export-data":
+        sys.exit(export_data_mode())
     elif len(sys.argv) >= 2 and sys.argv[1] == "--inject":
         if len(sys.argv) < 3:
             print("Usage: python3 update_news.py --inject <live_news.json> [--force]")

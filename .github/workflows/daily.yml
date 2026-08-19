@@ -49,11 +49,18 @@ jobs:
             echo "No live_news.json, skipping inject (ensure already ran)"
           fi
 
+      - name: Rebuild versioned external data files (always)
+        run: |
+          # Even if --status was OK and --inject was skipped (idempotent guard),
+          # we must (re)generate data/news-YYYY-MM-DD.js so the front-end always
+          # loads today's news regardless of index.html cache age.
+          python update_news.py --export-data || true
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
+          git add index.html data/
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else

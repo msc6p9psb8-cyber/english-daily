@@ -305,6 +305,52 @@ function saveData(key, data) {
   localStorage.setItem(key, JSON.stringify(data));
 }
 
+/* ============================================================
+   EXTERNAL DATA BOOTSTRAP（彻底解决浏览器/CDN 缓存旧 HTML 的问题）
+   ------------------------------------------------------------
+   GitHub Actions 每天把当天新闻写入 data/news-YYYY-MM-DD.js（文件名含日期，
+   URL 唯一 → 永不命中缓存）。这里用 todayStr() 动态同步加载当天 + 最近几天的
+   数据文件，合并进 window.__LIVE_NEWS__。因此即使 index.html 被缓存成旧版，
+   只要这段 JS 执行，就一定能拿到当天最新新闻（含全文 body / 语法 / 俚语）。
+   ============================================================ */
+(function loadExternalNews() {
+  var BASE = 'data/';
+  var EXT = [];
+  function syncGet(url) {
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, false); // synchronous: data must be ready before render
+      xhr.timeout = 15000;
+      xhr.send(null);
+      if (xhr.status === 200) return xhr.responseText;
+    } catch (e) {}
+    return null;
+  }
+  // 1) load manifest (recent dates, newest first)
+  var manifestSrc = syncGet(BASE + 'news-manifest.js');
+  var dates = [];
+  if (manifestSrc) {
+    var m = manifestSrc.match(/__NEWS_MANIFEST__\s*=\s*(\[[^\]]*\])/);
+    if (m) { try { dates = JSON.parse(m[1].replace(/'/g, '"')); } catch(e){} }
+  }
+  // 2) ensure today is present (in case manifest is momentarily stale)
+  var today = todayStr();
+  if (dates.indexOf(today) === -1) dates.unshift(today);
+  // 3) load each day's data file (synchronous)
+  for (var i = 0; i < dates.length; i++) {
+    syncGet(BASE + 'news-' + dates[i] + '.js');
+  }
+  // 4) flatten all external news into an array for render / hover-dict use
+  var LIVE = window.__LIVE_NEWS__ || {};
+  Object.keys(LIVE).forEach(function (d) {
+    var obj = LIVE[d];
+    (obj && obj.articles || []).forEach(function (a) {
+      EXT.push(a);
+    });
+  });
+  window.__EXT_NEWS__ = EXT;
+})();
+
 function getDefaultNews() {
   return [
 
@@ -1937,6 +1983,75 @@ let state = {
   vocabFilter: 'all', // all, needReview, mastered
   searchQuery: ''
 };
+
+/* ------------------------------------------------------------
+   增强默认数据源：把外置数据文件（window.__EXT_NEWS__）合并进来。
+   外置当天数据优先 → 即使 index.html 是缓存旧版，渲染时也以
+   GitHub Actions 当天抓取的最新数据（含全文 body）为准。
+   ------------------------------------------------------------ */
+(function augmentDefaults() {
+  var EXT = window.__EXT_NEWS__ || [];
+  if (EXT.length === 0) return;
+
+  var _builtinNews = getDefaultNews;
+  getDefaultNews = function () {
+    var builtin = _builtinNews();
+    var byId = {};
+    // 内嵌数据作为基础（记录 id 用于去重）
+    builtin.forEach(function (n) { byId[n.id] = 1; });
+    // 外置数据（含最新当天、带全文 body）排在前面，跳过与内嵌重复的
+    var extNew = [];
+    EXT.forEach(function (n) { if (!byId[n.id]) { byId[n.id] = 1; extNew.push(n); } });
+    return extNew.concat(builtin);
+  };
+
+  var _builtinVocab = getDefaultVocab;
+  getDefaultVocab = function () {
+    var builtin = _builtinVocab();
+    var byKey = {};
+    builtin.forEach(function (v) { byKey[v.id] = 1; byKey['w|' + (v.word||'').toLowerCase()] = 1; });
+    var merged = builtin.slice();
+    EXT.forEach(function (n) {
+      (n.vocabPoints || []).forEach(function (v, i) {
+        var vid = 'v_' + String(n.date).replace(/-/g, '') + '_' + i + '_x';
+        var key = 'w|' + String(v.word||'').toLowerCase();
+        if (byKey[vid] || byKey[key]) return;
+        byKey[vid] = 1; byKey[key] = 1;
+        merged.push({
+          id: vid, word: v.word, phonetic: v.phonetic || '',
+          definition: v.definition || '', en_def: v.en_def || '',
+          example: v.example || '', example2: v.example2 || '',
+          source: n.source, mastered: false,
+          reviewDate: n.date, reviewCount: 0, dateAdded: n.date
+        });
+      });
+    });
+    return merged;
+  };
+
+  var _builtinGram = getDefaultGrammar;
+  getDefaultGrammar = function () {
+    var builtin = _builtinGram();
+    var byKey = {};
+    builtin.forEach(function (g) { byKey[g.id] = 1; byKey['p|' + (g.pattern||'')] = 1; });
+    var merged = builtin.slice();
+    EXT.forEach(function (n) {
+      (n.grammarPoints || []).forEach(function (g, i) {
+        var gid = 'g_' + String(n.date).replace(/-/g, '') + '_' + i + '_x';
+        var key = 'p|' + (g.pattern||'');
+        if (byKey[gid] || byKey[key]) return;
+        byKey[gid] = 1; byKey[key] = 1;
+        merged.push({
+          id: gid, pattern: g.pattern, explanation: g.explanation || '',
+          en: g.en || '', example: g.example || '', example2: g.example2 || '',
+          source: n.source, mastered: false,
+          reviewDate: n.date, dateAdded: n.date
+        });
+      });
+    });
+    return merged;
+  };
+})();
 
 // Initialize with defaults if first time
 if (!state.news || !state.vocab || !state.grammar) {
