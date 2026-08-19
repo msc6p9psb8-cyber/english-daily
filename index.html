@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 缓存策略：index.html 从 2026-08-19 起不再内联每日新闻，改为加载外置数据文件。
+     本页允许被 CDN/Safari 缓存（内容不再每日变化），但强制浏览器每次重新校验，
+     确保拿到含"外置数据加载机制"的版本后即永久生效。 -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>英语强化学习工作台 - Daily News English</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
