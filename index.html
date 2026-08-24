@@ -2582,15 +2582,12 @@ let state = {
    ------------------------------------------------------------ */
 (function augmentDefaults() {
   var EXT = window.__EXT_NEWS__ || [];
-  if (EXT.length === 0) return;
 
   var _builtinNews = getDefaultNews;
   getDefaultNews = function () {
     var builtin = _builtinNews();
     var byId = {};
-    // 内嵌数据作为基础（记录 id 用于去重）
     builtin.forEach(function (n) { byId[n.id] = 1; });
-    // 外置数据（含最新当天、带全文 body）排在前面，跳过与内嵌重复的
     var extNew = [];
     EXT.forEach(function (n) { if (!byId[n.id]) { byId[n.id] = 1; extNew.push(n); } });
     return extNew.concat(builtin);
@@ -2643,32 +2640,27 @@ let state = {
     return merged;
   };
 
-  // Deduplicate slangPoints from external data + built-in
-  var _builtinSlang = function () {
-    return [];
-  };
-  var mergedSlang = [];
-  EXT.forEach(function (n) {
+  // slang: standalone function (reads __EXT_NEWS__ directly, no override needed)
+  var _builtinSlang = function () { return []; };
+  getDefaultSlang = function () {
     var seenTerms = {};
-    (n.slangPoints || []).forEach(function (s, i) {
-      var key = (s.term || '').toLowerCase();
-      if (seenTerms[key]) return;
-      seenTerms[key] = 1;
-      mergedSlang.push({
-        id: 's_' + String(n.date).replace(/-/g, '') + '_' + i,
-        term: s.term || '',
-        meaning: s.meaning || '',
-        en: s.en || '',
-        example: s.example || '',
-        example2: s.example2 || '',
-        source: n.source,
-        mastered: false,
-        reviewDate: n.date,
-        dateAdded: n.date
+    var merged = [];
+    EXT.forEach(function (n) {
+      (n.slangPoints || []).forEach(function (s, i) {
+        var key = (s.term || '').toLowerCase();
+        if (seenTerms[key]) return;
+        seenTerms[key] = 1;
+        merged.push({
+          id: 's_' + String(n.date).replace(/-/g, '') + '_' + i,
+          term: s.term || '', meaning: s.meaning || '',
+          en: s.en || '', example: s.example || '', example2: s.example2 || '',
+          source: n.source, mastered: false,
+          reviewDate: n.date, dateAdded: n.date
+        });
       });
     });
-  });
-  window.getDefaultSlang = function () { return mergedSlang; };
+    return merged;
+  };
 })();
 
 // Initialize with defaults if first time
