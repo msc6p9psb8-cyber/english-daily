@@ -2661,6 +2661,53 @@ let state = {
     });
     return merged;
   };
+
+  // ── 全局去重：每次页面加载都清理 vocab/grammar/slang 中的重复项 ──
+  // 只在 state 已有数据时执行（首次初始化时 state 为空，跳过）
+  var _doDedup = function (arr, keyFn) {
+    var seen = {}, unique = [];
+    arr.forEach(function (item) {
+      var k = keyFn(item);
+      if (!seen[k]) { seen[k] = 1; unique.push(item); }
+    });
+    return unique;
+  };
+
+  if (typeof state !== 'undefined' && state.vocab && state.vocab.length > 0) {
+    var beforeV = state.vocab.length;
+    state.vocab = _doDedup(state.vocab, function (v) {
+      return v.id || ('v|' + String(v.word || '').toLowerCase());
+    });
+    state.vocab = _doDedup(state.vocab, function (v) {
+      return String(v.dateAdded || v.reviewDate || '') + '|' + String(v.word || '').toLowerCase();
+    });
+    if (state.vocab.length < beforeV) {
+      console.log('[augmentDefaults] vocab去重：' + beforeV + ' → ' + state.vocab.length);
+    }
+  }
+
+  if (typeof state !== 'undefined' && state.grammar && state.grammar.length > 0) {
+    var beforeG = state.grammar.length;
+    state.grammar = _doDedup(state.grammar, function (g) {
+      return g.id || ('p|' + (g.pattern || ''));
+    });
+    state.grammar = _doDedup(state.grammar, function (g) {
+      return String(g.dateAdded || g.reviewDate || '') + '|' + (g.pattern || '').toLowerCase();
+    });
+    if (state.grammar.length < beforeG) {
+      console.log('[augmentDefaults] grammar去重：' + beforeG + ' → ' + state.grammar.length);
+    }
+  }
+
+  if (typeof state !== 'undefined' && state.slang && state.slang.length > 0) {
+    var beforeS = state.slang.length;
+    state.slang = _doDedup(state.slang, function (s) {
+      return String(s.dateAdded || s.reviewDate || '') + '|' + (s.term || '').toLowerCase();
+    });
+    if (state.slang.length < beforeS) {
+      console.log('[augmentDefaults] slang去重：' + beforeS + ' → ' + state.slang.length);
+    }
+  }
 })();
 
 // Initialize with defaults if first time
