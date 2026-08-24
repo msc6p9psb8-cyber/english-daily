@@ -2642,6 +2642,39 @@ let state = {
     });
     return merged;
   };
+
+  // Deduplicate slangPoints from external data + built-in
+  var _builtinSlang = function () {
+    return [];
+  };
+  getDefaultSlang = function () {
+    var byKey = {};
+    var merged = [];
+    // Builtin slang (none currently, but keep for future)
+    // External slang: pick one occurrence per term per date
+    EXT.forEach(function (n) {
+      var seenTerms = {};
+      (n.slangPoints || []).forEach(function (s, i) {
+        var key = (s.term || '').toLowerCase();
+        if (seenTerms[key]) return;
+        seenTerms[key] = 1;
+        var sid = 's_' + String(n.date).replace(/-/g, '') + '_' + i;
+        merged.push({
+          id: sid,
+          term: s.term || '',
+          meaning: s.meaning || '',
+          en: s.en || '',
+          example: s.example || '',
+          example2: s.example2 || '',
+          source: n.source,
+          mastered: false,
+          reviewDate: n.date,
+          dateAdded: n.date
+        });
+      });
+    });
+    return merged;
+  };
 })();
 
 // Initialize with defaults if first time
@@ -2649,6 +2682,7 @@ if (!state.news || !state.vocab || !state.grammar) {
   state.news = getDefaultNews();
   state.vocab = getDefaultVocab();
   state.grammar = getDefaultGrammar();
+  state.slang = getDefaultSlang();
   state.settings.initialized = true;
   persistAll();
 } else {
@@ -2658,6 +2692,11 @@ if (!state.news || !state.vocab || !state.grammar) {
   // 强制覆盖 localStorage 里旧的模板/自愈内容（nsh_*）。否则自愈模板占满 5 条后，
   // 下方按日期上限的合并逻辑会把真实新闻挡在外面——用户永远看到旧内容。
   const liveToday = defaults.filter(d => d.date === today && d.source_type === 'live');
+  // Initialize slang state (may not exist in older localStorage)
+  if (!state.slang) {
+    state.slang = getDefaultSlang();
+    persistAll();
+  }
   if (liveToday.length > 0) {
     const liveIds = new Set(liveToday.map(n => n.id));
     state.news = [...liveToday, ...state.news.filter(n => !(n.date === today && !liveIds.has(n.id)))];
@@ -5401,16 +5440,25 @@ function renderNewsItem(n) {
     html += '</div>';
   }
 
-  // Slang tags
+  // Slang tags (deduplicate within same news)
   if (n.slangPoints && n.slangPoints.length > 0) {
-    html += '<div class="analysis-section"><div class="analysis-label slang">💬 俚语用法</div>';
-    n.slangPoints.forEach(s => {
-      const key = uid();
-      window._detailData[key] = {type:'slang',term:s.term,meaning:s.meaning,en:s.en||'',example:s.example||'',example2:s.example2||''};
-      const cn = s.meaning.length > 18 ? s.meaning.slice(0,16)+'…' : s.meaning;
-      html += `<span class="slang-tag" data-detail-key="${key}" title="点击查看详情"><span class="tag-en">${escapeHTML(s.term)}</span><span class="tag-cn">${escapeHTML(cn)}</span></span>`;
+    var seenSlang = {};
+    var uniqueSlang = n.slangPoints.filter(function(s) {
+      var k = (s.term || '').toLowerCase();
+      if (seenSlang[k]) return false;
+      seenSlang[k] = true;
+      return true;
     });
-    html += '</div>';
+    if (uniqueSlang.length > 0) {
+      html += '<div class="analysis-section"><div class="analysis-label slang">💬 俚语用法</div>';
+      uniqueSlang.forEach(function(s) {
+        var key = uid();
+        window._detailData[key] = {type:'slang',term:s.term,meaning:s.meaning,en:s.en||'',example:s.example||'',example2:s.example2||''};
+        var cn = (s.meaning||'').length > 18 ? s.meaning.slice(0,16)+'…' : s.meaning;
+        html += '<span class="slang-tag" data-detail-key="'+key+'" title="点击查看详情"><span class="tag-en">'+escapeHTML(s.term)+'</span><span class="tag-cn">'+escapeHTML(cn)+'</span></span>';
+      });
+      html += '</div>';
+    }
   }
 
   // Action: save vocab/grammar to collection
