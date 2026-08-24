@@ -2647,34 +2647,28 @@ let state = {
   var _builtinSlang = function () {
     return [];
   };
-  getDefaultSlang = function () {
-    var byKey = {};
-    var merged = [];
-    // Builtin slang (none currently, but keep for future)
-    // External slang: pick one occurrence per term per date
-    EXT.forEach(function (n) {
-      var seenTerms = {};
-      (n.slangPoints || []).forEach(function (s, i) {
-        var key = (s.term || '').toLowerCase();
-        if (seenTerms[key]) return;
-        seenTerms[key] = 1;
-        var sid = 's_' + String(n.date).replace(/-/g, '') + '_' + i;
-        merged.push({
-          id: sid,
-          term: s.term || '',
-          meaning: s.meaning || '',
-          en: s.en || '',
-          example: s.example || '',
-          example2: s.example2 || '',
-          source: n.source,
-          mastered: false,
-          reviewDate: n.date,
-          dateAdded: n.date
-        });
+  var mergedSlang = [];
+  EXT.forEach(function (n) {
+    var seenTerms = {};
+    (n.slangPoints || []).forEach(function (s, i) {
+      var key = (s.term || '').toLowerCase();
+      if (seenTerms[key]) return;
+      seenTerms[key] = 1;
+      mergedSlang.push({
+        id: 's_' + String(n.date).replace(/-/g, '') + '_' + i,
+        term: s.term || '',
+        meaning: s.meaning || '',
+        en: s.en || '',
+        example: s.example || '',
+        example2: s.example2 || '',
+        source: n.source,
+        mastered: false,
+        reviewDate: n.date,
+        dateAdded: n.date
       });
     });
-    return merged;
-  };
+  });
+  window.getDefaultSlang = function () { return mergedSlang; };
 })();
 
 // Initialize with defaults if first time
