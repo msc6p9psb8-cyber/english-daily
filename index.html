@@ -2817,6 +2817,34 @@ let state = {
 (function augmentDefaults() {
   var EXT = window.__EXT_NEWS__ || [];
 
+  // 内容级去重助手：按「词/术语/句型」去重（忽略日期），相同内容只保留第一条。
+  // 关键：之前的 bug 是去重 key 带了 dateAdded，导致跨日期的同一词（如 administration
+  // 在内置数据里出现 8 次）永远去不掉，于是「核心词汇/俚语」反复出现重复。
+  function uniqByWord(arr) {
+    var seen = {}, out = [];
+    arr.forEach(function (v) {
+      var k = 'w|' + String(v.word || '').toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(v); }
+    });
+    return out;
+  }
+  function uniqByPattern(arr) {
+    var seen = {}, out = [];
+    arr.forEach(function (g) {
+      var k = 'p|' + String(g.pattern || '').toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(g); }
+    });
+    return out;
+  }
+  function uniqByTerm(arr) {
+    var seen = {}, out = [];
+    arr.forEach(function (s) {
+      var k = 't|' + String(s.term || '').toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(s); }
+    });
+    return out;
+  }
+
   var _builtinNews = getDefaultNews;
   getDefaultNews = function () {
     var builtin = _builtinNews();
@@ -2829,7 +2857,7 @@ let state = {
 
   var _builtinVocab = getDefaultVocab;
   getDefaultVocab = function () {
-    var builtin = _builtinVocab();
+    var builtin = uniqByWord(_builtinVocab()); // 先折叠内置种子里的跨日期重复词
     var byKey = {};
     builtin.forEach(function (v) { byKey[v.id] = 1; byKey['w|' + (v.word||'').toLowerCase()] = 1; });
     var merged = builtin.slice();
@@ -2848,12 +2876,12 @@ let state = {
         });
       });
     });
-    return merged;
+    return uniqByWord(merged); // 再次折叠，保证一次合并后也无重复
   };
 
   var _builtinGram = getDefaultGrammar;
   getDefaultGrammar = function () {
-    var builtin = _builtinGram();
+    var builtin = uniqByPattern(_builtinGram());
     var byKey = {};
     builtin.forEach(function (g) { byKey[g.id] = 1; byKey['p|' + (g.pattern||'')] = 1; });
     var merged = builtin.slice();
@@ -2871,19 +2899,14 @@ let state = {
         });
       });
     });
-    return merged;
+    return uniqByPattern(merged);
   };
 
-  // slang: standalone function (reads __EXT_NEWS__ directly, no override needed)
-  var _builtinSlang = function () { return []; };
+  // slang: 直接读 __EXT_NEWS__，按 term 全局去重（忽略日期/来源）
   getDefaultSlang = function () {
-    var seenTerms = {};
     var merged = [];
     EXT.forEach(function (n) {
       (n.slangPoints || []).forEach(function (s, i) {
-        var key = (s.term || '').toLowerCase();
-        if (seenTerms[key]) return;
-        seenTerms[key] = 1;
         merged.push({
           id: 's_' + String(n.date).replace(/-/g, '') + '_' + i,
           term: s.term || '', meaning: s.meaning || '',
@@ -2893,55 +2916,44 @@ let state = {
         });
       });
     });
-    return merged;
+    return uniqByTerm(merged);
   };
 
-  // ── 全局去重：每次页面加载都清理 vocab/grammar/slang 中的重复项 ──
-  // 只在 state 已有数据时执行（首次初始化时 state 为空，跳过）
-  var _doDedup = function (arr, keyFn) {
-    var seen = {}, unique = [];
-    arr.forEach(function (item) {
-      var k = keyFn(item);
-      if (!seen[k]) { seen[k] = 1; unique.push(item); }
+  // ── 每次加载都按「内容」清理已持久化的 state，彻底修复历史残留重复 ──
+  // 不看日期，只看词义/术语/句型；无论以前怎么污染，刷新即自愈。
+  function dedupeBy(arr, keyFn) {
+    var seen = {}, out = [];
+    (arr || []).forEach(function (it) {
+      var k = keyFn(it);
+      if (!seen[k]) { seen[k] = 1; out.push(it); }
     });
-    return unique;
-  };
-
-  if (typeof state !== 'undefined' && state.vocab && state.vocab.length > 0) {
-    var beforeV = state.vocab.length;
-    state.vocab = _doDedup(state.vocab, function (v) {
-      return v.id || ('v|' + String(v.word || '').toLowerCase());
-    });
-    state.vocab = _doDedup(state.vocab, function (v) {
-      return String(v.dateAdded || v.reviewDate || '') + '|' + String(v.word || '').toLowerCase();
-    });
-    if (state.vocab.length < beforeV) {
-      console.log('[augmentDefaults] vocab去重：' + beforeV + ' → ' + state.vocab.length);
-    }
+    return out;
   }
 
-  if (typeof state !== 'undefined' && state.grammar && state.grammar.length > 0) {
-    var beforeG = state.grammar.length;
-    state.grammar = _doDedup(state.grammar, function (g) {
-      return g.id || ('p|' + (g.pattern || ''));
-    });
-    state.grammar = _doDedup(state.grammar, function (g) {
-      return String(g.dateAdded || g.reviewDate || '') + '|' + (g.pattern || '').toLowerCase();
-    });
-    if (state.grammar.length < beforeG) {
-      console.log('[augmentDefaults] grammar去重：' + beforeG + ' → ' + state.grammar.length);
-    }
+  if (state && state.news && state.news.length) {
+    var bn = state.news.length;
+    state.news = dedupeBy(state.news, function (n) { return n.id; });
+    state.news = dedupeBy(state.news, function (n) { return String(n.date) + '|' + String(n.title || '').toLowerCase(); });
+    if (state.news.length < bn) console.log('[augmentDefaults] 新闻去重：' + bn + ' → ' + state.news.length);
+  }
+  if (state && state.vocab && state.vocab.length) {
+    var bv = state.vocab.length;
+    state.vocab = dedupeBy(state.vocab, function (v) { return String(v.word || '').toLowerCase(); });
+    if (state.vocab.length < bv) console.log('[augmentDefaults] 词汇去重：' + bv + ' → ' + state.vocab.length);
+  }
+  if (state && state.grammar && state.grammar.length) {
+    var bg = state.grammar.length;
+    state.grammar = dedupeBy(state.grammar, function (g) { return String(g.pattern || '').toLowerCase(); });
+    if (state.grammar.length < bg) console.log('[augmentDefaults] 语法去重：' + bg + ' → ' + state.grammar.length);
+  }
+  if (state && state.slang && state.slang.length) {
+    var bs = state.slang.length;
+    state.slang = dedupeBy(state.slang, function (s) { return String(s.term || '').toLowerCase(); });
+    if (state.slang.length < bs) console.log('[augmentDefaults] 俚语去重：' + bs + ' → ' + state.slang.length);
   }
 
-  if (typeof state !== 'undefined' && state.slang && state.slang.length > 0) {
-    var beforeS = state.slang.length;
-    state.slang = _doDedup(state.slang, function (s) {
-      return String(s.dateAdded || s.reviewDate || '') + '|' + (s.term || '').toLowerCase();
-    });
-    if (state.slang.length < beforeS) {
-      console.log('[augmentDefaults] slang去重：' + beforeS + ' → ' + state.slang.length);
-    }
-  }
+  // 把清理后的 state 写回 localStorage，避免下次刷新又从脏历史数据渲染
+  if (typeof persistAll === 'function') persistAll();
 })();
 
 // Initialize with defaults if first time
@@ -5682,10 +5694,17 @@ function renderNewsItem(n) {
   }
   if (n.url) html += `<a href="${escapeHTML(n.url)}" target="_blank" class="news-url" style="color:var(--primary-light)">🔗 ${escapeHTML(n.url)}</a>`;
 
-  // Vocab tags
+  // Vocab tags (去重：同篇内相同单词只显示一次)
   if (n.vocabPoints && n.vocabPoints.length > 0) {
+    var seenVocab = {};
+    var uniqueVocab = n.vocabPoints.filter(function (v) {
+      var k = (v.word || '').toLowerCase();
+      if (seenVocab[k]) return false;
+      seenVocab[k] = true;
+      return true;
+    });
     html += '<div class="analysis-section"><div class="analysis-label vocab">📝 核心词汇</div>';
-    n.vocabPoints.forEach(v => {
+    uniqueVocab.forEach(v => {
       const key = uid();
       window._detailData[key] = {type:'vocab',word:v.word,phonetic:v.phonetic,definition:v.definition,en_def:v.en_def||'',example:v.example,example2:v.example2};
       const cnShort = v.definition.includes('；') ? v.definition.split('；')[0] : v.definition;
