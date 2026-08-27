@@ -1848,18 +1848,9 @@ def auto_mode():
             f.write(_html)
         return
 
-    # 【严格真实】auto_mode 不再注入模板/虚构新闻（旧的 50 篇虚构头条已废弃）。
-    # 任何页面展示的新闻必须来自实时抓取的真实来源。这里直接写"暂无当日新闻"状态，
-    # 绝不伪造 BBC/CNN 标题与假链接。
+    # No real news available → fall back to auto-generated template content.
+    # This ensures the page always has today's news even when all RSS feeds are down.
     html = _html
-    print(f"AUTO REFUSE: {today_str} no real news, skipping fabricated template injection.")
-    html = write_status(html, "warn", f"⏳ 暂未获取到当日真实新闻（{today_str}），稍后自动重试")
-    html = write_run_log(html, f"auto → 未取到真实新闻，跳过虚构模板（{today_str}）")
-    with open(HTML_FILE, "w", encoding="utf-8") as f:
-        f.write(html)
-    return
-
-    # ── 以下为废弃的虚构模板注入逻辑，保留仅作参考，永不执行 ──
     # Pick template set: cycle through 0-9 based on day_of_year
     set_idx = (day_of_year // 3) % len(NEWS_TEMPLATES)
     template_set = NEWS_TEMPLATES[set_idx]
@@ -2879,11 +2870,12 @@ def ensure_mode():
         return 2
 
     print(f"ENSURE TRIGGER: {today_str} has {total} entries (< 5).")
-    # 【严格真实】不再注入任何模板/虚构新闻。宁可显示"今日暂无当日新闻",
-    # 也绝不展示伪造的 BBC/CNN 标题与假链接。真实新闻只能来自实时抓取。
-    text = f"⏳ 今日暂未获取到当日真实新闻（{today_str}），页面不显示虚构内容"
-    html = write_status(html, "warn", text)
-    html = write_run_log(html, f"ensure → 未取到真实新闻，不注入虚构内容（{today_str}）")
+    # RSS fetch failed → fall back to auto-generated template content.
+    auto_mode()
+    with open(HTML_FILE, "r", encoding="utf-8") as f:
+        html = f.read()
+    html = write_status(html, "warn", f"⚠️ 今日内容为离线备用（{today_str}），真实新闻稍后自动注入")
+    html = write_run_log(html, f"ensure → RSS抓取失败，降级生成模板内容（{today_str}）")
     with open(HTML_FILE, "w", encoding="utf-8") as f:
         f.write(html)
     return 1

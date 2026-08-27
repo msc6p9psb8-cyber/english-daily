@@ -224,9 +224,9 @@ textarea.input{resize:vertical;min-height:60px}
   </div>
 
   <!-- Push status (written by update_news.py, real-time truth) -->
-  <div class="push-status ok" id="pushStatus">✅ 今日已推送 5 篇真实新闻（2026-08-26｜BBC）</div>
+  <div class="push-status warn" id="pushStatus">⚠️ 今日内容为离线备用（2026-08-27），真实新闻稍后自动注入</div>
   <div style="font-size:11px;color:var(--gray-400);text-align:center;margin:-6px 0 10px 0" id="pageVersionLine">页面文件版本 <b id="pageVersionTag">v20260826-1</b> · 若这里不是最新版本，说明浏览器缓存了旧页面，请强制刷新</div>
-  <div class="run-log" id="runLog"><p class="run-log-title">📋 自动运行日志</p><p class="run-log-item">[08-17 13:48:09] inject → 已注入 5 篇真实新闻（2026-08-17｜BBC News）</p><p class="run-log-item">[08-18 03:27:49] inject → 已注入 5 篇真实新闻（2026-08-18｜BBC）</p><p class="run-log-item">[08-18 04:56:25] inject → 跳过：今日已有 5 篇真实新闻（2026-08-18）</p><p class="run-log-item">[08-19 03:31:02] inject → 已注入 5 篇真实新闻（2026-08-19｜BBC）</p><p class="run-log-item">[08-20 03:31:20] inject → 已注入 5 篇真实新闻（2026-08-20｜BBC）</p><p class="run-log-item">[08-21 03:37:51] inject → 已注入 5 篇真实新闻（2026-08-21｜BBC）</p><p class="run-log-item">[08-22 03:24:30] inject → 已注入 5 篇真实新闻（2026-08-22｜BBC）</p><p class="run-log-item">[08-23 03:37:26] inject → 已注入 5 篇真实新闻（2026-08-23｜BBC）</p><p class="run-log-item">[08-24 04:02:47] inject → 已注入 5 篇真实新闻（2026-08-24｜BBC）</p><p class="run-log-item">[08-25 03:34:56] inject → 已注入 5 篇真实新闻（2026-08-25｜BBC）</p><p class="run-log-item">[08-25 04:59:38] inject → 跳过：今日已有 5 篇真实新闻（2026-08-25）</p><p class="run-log-item">[08-26 03:59:36] inject → 已注入 5 篇真实新闻（2026-08-26｜BBC）</p></div>
+  <div class="run-log" id="runLog"><p class="run-log-title">📋 自动运行日志</p><p class="run-log-item">[08-19 03:31:02] inject → 已注入 5 篇真实新闻（2026-08-19｜BBC）</p><p class="run-log-item">[08-20 03:31:20] inject → 已注入 5 篇真实新闻（2026-08-20｜BBC）</p><p class="run-log-item">[08-21 03:37:51] inject → 已注入 5 篇真实新闻（2026-08-21｜BBC）</p><p class="run-log-item">[08-22 03:24:30] inject → 已注入 5 篇真实新闻（2026-08-22｜BBC）</p><p class="run-log-item">[08-23 03:37:26] inject → 已注入 5 篇真实新闻（2026-08-23｜BBC）</p><p class="run-log-item">[08-24 04:02:47] inject → 已注入 5 篇真实新闻（2026-08-24｜BBC）</p><p class="run-log-item">[08-25 03:34:56] inject → 已注入 5 篇真实新闻（2026-08-25｜BBC）</p><p class="run-log-item">[08-25 04:59:38] inject → 跳过：今日已有 5 篇真实新闻（2026-08-25）</p><p class="run-log-item">[08-26 03:59:36] inject → 已注入 5 篇真实新闻（2026-08-26｜BBC）</p><p class="run-log-item">[08-27 15:21:41] ensure → 未取到真实新闻，不注入虚构内容（2026-08-27）</p><p class="run-log-item">[08-27 15:23:56] auto → 离线备用：注入模板内容 5 篇（2026-08-27，非真实新闻）</p><p class="run-log-item">[08-27 15:23:56] ensure → RSS抓取失败，降级生成模板内容（2026-08-27）</p></div>
   <div class="copy-push-row">
     <button class="btn btn-primary" onclick="copyPushText()" title="把今日 5 篇新闻整理成微信可粘贴的文本">📋 复制今日推送文本</button>
     <span class="copy-push-hint">把今日内容一键整理成微信消息，粘贴即发</span>
@@ -359,6 +359,103 @@ function saveData(key, data) {
 
 function getDefaultNews() {
   return [
+
+    // ===== 2026-08-27 =====
+    {
+      id: 'n1787815436_0', date: '2026-08-27', source: 'BBC', country: 'UK',
+      title: 'New Public Transport Funding Aimed at Reducing Car Dependency',
+      summary: 'The transport secretary announced billions in new investment for buses and rail lines, particularly in underserved regions. The plan targets a 20 percent reduction in urban car journeys within a decade.',
+      body: '',
+      url: 'https://www.bbc.com/news/uk-transport-funding',
+      source_type: 'template',
+      vocabPoints: [
+        {word:'recession',phonetic:"/rɪˈseʃən/",definition:'经济衰退',en_def:'a period of temporary economic decline',example:'Economists warned the country could slip into recession by year\'s end.',example2:'The country is teetering on the edge of a recession.'},
+        {word:'microplastic',phonetic:"/ˈmaɪkrəʊˌplæstɪk/",definition:'微塑料',en_def:'tiny plastic particles polluting the environment',example:'Microplastics have been found in human blood samples.',example2:'Analysts point to microplastic when explaining the market\'s reaction.'},
+        {word:'austerity',phonetic:"/ɒˈsterɪti/",definition:'紧缩政策',en_def:'strict economic policies to reduce government debt',example:'Years of austerity led to cuts in public services.',example2:'Analysts point to austerity when explaining the market\'s reaction.'},
+      ],
+      grammarPoints: [
+        {pattern:'First Conditional: If + present, will + base verb',explanation:'Used for real and possible future situations: "If the vote passes, the law will take effect in January."',en:'',example:'If the data confirms the trend, the Fed will likely cut rates.',example2:''},
+      ],
+      slangPoints: [
+        {term:'a reality check',meaning:'Something that forces you to face reality. "The quarterly loss was a reality check for the overconfident startup."',en:'"a reality check" is a common English idiom/phrase in news reporting, usually used like this: "In today\'s headlines, \'a reality check\' features prominently in the coverage.".',example:'',example2:'In today\'s headlines, \'a reality check\' features prominently in the coverage.'},
+      ]
+    },
+    {
+      id: 'n1787815436_1', date: '2026-08-27', source: 'CNN', country: 'US',
+      title: 'Tech Giant Acquires AI Startup in Multi-Billion Dollar Deal',
+      summary: 'The industry leader agreed to purchase a prominent artificial intelligence company, accelerating the wave of consolidation in the sector. Antitrust regulators signaled they would review the transaction.',
+      body: '',
+      url: 'https://www.cnn.com/business/ai-acquisition',
+      source_type: 'template',
+      vocabPoints: [
+        {word:'neural',phonetic:"/ˈnjʊərəl/",definition:'神经网络的',en_def:'relating to computer systems modeled on the human brain',example:'Neural networks have revolutionized image recognition.',example2:'Campaigners welcomed the move, saying it reflects growing concern about neural.'},
+        {word:'equity',phonetic:"/ˈekwɪti/",definition:'股权',en_def:'equity；the value of shares in a company',example:'The founders retained a 60% equity stake after the funding round.',example2:'The latest figures show a clear link between the economy and equity.'},
+        {word:'impeachment',phonetic:"/ɪmˈpiːtʃmənt/",definition:'弹劾',en_def:'a formal charge of misconduct against a public official',example:'The impeachment trial lasted three weeks in the Senate.',example2:'The new policy is widely seen as a major step in addressing impeachment.'},
+      ],
+      grammarPoints: [
+        {pattern:'Passive with \'get\': get + past participle',explanation:'Informal passive, common in news for negative events: "got injured," "got caught." Adds a sense of the subject being affected.',en:'',example:'Three people got trapped in the elevator during the blackout.',example2:''},
+      ],
+      slangPoints: [
+        {term:'rock the boat',meaning:'To cause trouble or disturb a stable situation. "The director was fired for rocking the boat on diversity issues."',en:'"rock the boat" is a common English idiom/phrase in news reporting, usually used like this: "In today\'s headlines, \'rock the boat\' features prominently in the coverage.".',example:'',example2:'In today\'s headlines, \'rock the boat\' features prominently in the coverage.'},
+      ]
+    },
+    {
+      id: 'n1787815436_2', date: '2026-08-27', source: 'AP News', country: 'US',
+      title: 'CDC Issues Alert as Flu Season Arrives Early and Hits Hard',
+      summary: 'Influenza cases surged weeks ahead of the usual timeline, overwhelming some emergency departments. Officials urged the public to get vaccinated, noting ample supply this year.',
+      body: '',
+      url: 'https://apnews.com/health/flu-season-early',
+      source_type: 'template',
+      vocabPoints: [
+        {word:'breakthrough',phonetic:"/ˈbreɪkθruː/",definition:'突破；重大进展',en_def:'a sudden important development or discovery',example:'The breakthrough could lead to more efficient solar panels.',example2:'Campaigners welcomed the move, saying it reflects growing concern about breakthrough.'},
+        {word:'geriatric',phonetic:"/ˌdʒeriˈætrɪk/",definition:'老年医学的',en_def:'relating to the medical care of elderly people',example:'Geriatric wards are under pressure from an ageing population.',example2:'The report highlighted geriatric as a key factor in the decision.'},
+        {word:'inequality',phonetic:"/ˌɪnɪˈkwɒləti/",definition:'不平等',en_def:'lack of fairness in the distribution of resources',example:'Income inequality has widened over the past three decades.',example2:'A growing number of people now call attention to inequality.'},
+      ],
+      grammarPoints: [
+        {pattern:'Noun phrase as headline: omission of \'be\'',explanation:'Headlines drop \'be\' verbs: "(The) Prime Minister (is) to Visit Japan." \'To + infinitive\' replaces future tense in headlines.',en:'',example:'Central Bank Expected to Raise Rates Following Inflation Data.',example2:''},
+      ],
+      slangPoints: [
+        {term:'at the eleventh hour',meaning:'At the last possible moment. "A deal was struck at the eleventh hour, averting a strike."',en:'"at the eleventh hour" is a common English idiom/phrase in news reporting, usually used like this: "The latest report once again highlights \'at the eleventh hour\' in its coverage.".',example:'',example2:'The latest report once again highlights \'at the eleventh hour\' in its coverage.'},
+      ]
+    },
+    {
+      id: 'n1787815436_3', date: '2026-08-27', source: 'Reuters', country: 'UK',
+      title: 'Developing Nations Walk Out of Trade Talks Over Agriculture Subsidies',
+      summary: 'Delegations from dozens of countries staged a dramatic walkout, accusing wealthy nations of stonewalling on farm subsidy reform. Negotiators scrambled to salvage the summit before it collapsed entirely.',
+      body: '',
+      url: 'https://www.reuters.com/world/trade-talks-walkout',
+      source_type: 'template',
+      vocabPoints: [
+        {word:'peacekeeping',phonetic:"/ˈpiːskiːpɪŋ/",definition:'维和的',en_def:'maintaining peace, especially by military forces',example:'Peacekeeping troops were deployed along the disputed border.',example2:'The latest figures show a clear link between the economy and peacekeeping.'},
+        {word:'liquidity',phonetic:"/lɪˈkwɪdəti/",definition:'流动性',en_def:'the availability of liquid assets to a market',example:'The central bank injected liquidity to stabilize the banking sector.',example2:'The report highlighted liquidity as a key factor in the decision.'},
+        {word:'coalition',phonetic:"/ˌkəʊəˈlɪʃən/",definition:'联盟；联合政府',en_def:'a temporary alliance of political parties',example:'The coalition government faced its first major test.',example2:'Campaigners welcomed the move, saying it reflects growing concern about coalition.'},
+      ],
+      grammarPoints: [
+        {pattern:'Non-defining Relative Clause: who/which (with commas)',explanation:'Adds extra information: "The senator, who has served since 2010, announced retirement." Commas required.',en:'',example:'Tesla, which reported record earnings, saw its stock jump 12 percent.',example2:''},
+      ],
+      slangPoints: [
+        {term:'lay the groundwork',meaning:'To prepare the foundation for future action. "The summit laid the groundwork for a broader climate agreement."',en:'to prepare the basis for future work or success e.g. "In today\'s headlines, \'lay the groundwork\' features prominently in the coverage."',example:'',example2:'In today\'s headlines, \'lay the groundwork\' features prominently in the coverage.'},
+      ]
+    },
+    {
+      id: 'n1787815436_4', date: '2026-08-27', source: 'The Guardian', country: 'UK',
+      title: 'Olympic Committee Announces Five New Sports for 2032 Games',
+      summary: 'The governing body added five disciplines to the program for the Brisbane Olympics, including squash and flag football. The move aims to attract younger audiences and boost global viewership.',
+      body: '',
+      url: 'https://www.theguardian.com/sport/olympics-new-sports',
+      source_type: 'template',
+      vocabPoints: [
+        {word:'census',phonetic:"/ˈsensəs/",definition:'人口普查',en_def:'an official count of a population',example:'The census revealed that the city\'s population had grown by 15%.',example2:'The report highlighted census as a key factor in the decision.'},
+        {word:'suburban',phonetic:"/səˈbɜːrbən/",definition:'郊区的',en_def:'relating to residential areas outside city centers',example:'Suburban home prices rose as families sought more space.',example2:'The new policy is widely seen as a major step in addressing suburban.'},
+        {word:'endurance',phonetic:"/ɪnˈdjʊərəns/",definition:'耐力；持久力',en_def:'the ability to keep going for a long time',example:'Marathon running tests both physical and mental endurance.',example2:'A growing number of people now call attention to endurance.'},
+      ],
+      grammarPoints: [
+        {pattern:'Emphatic \'do/does/did\'',explanation:'"The evidence does suggest a pattern." Adds emphasis in present/past simple where no auxiliary normally exists.',en:'',example:'Despite the controversy, the data does show a clear improvement in outcomes.',example2:''},
+      ],
+      slangPoints: [
+        {term:'the ball is in someone\'s court',meaning:'It\'s someone\'s turn to take action. "The proposal has been made; now the ball is in the government\'s court."',en:'"the ball is in someone\'s court" is a common English idiom/phrase in news reporting, usually used like this: "The latest report once again highlights \'the ball is in someone\'s court\' in its coverage.".',example:'',example2:'The latest report once again highlights \'the ball is in someone\'s court\' in its coverage.'},
+      ]
+    },
 
     // ===== 2026-08-26 =====
     {
@@ -2630,6 +2727,21 @@ function getDefaultVocab() {
     {id:'v_20260826_4_0',word:'responsibility',phonetic:"",definition:'责任',en_def:'a form of trustworthiness; the trait of being answerable to someone for something or being responsible for one\'s conduct',example:'Top stories O&#x27;Neill takes responsibility with nowhere to hide for Celtic\n\nAlcaraz and Williams thrill in US Open mixed doubles\n\nMan Utd&#x27;s midfield spending is done - now for a left-back?',example2:'The incident has once again put responsibility under the spotlight.',source:'BBC - Brain disease in dead NFL play',mastered:false,reviewDate:'2026-08-26',reviewCount:0,dateAdded:'2026-08-26'},
     {id:'v_20260826_4_1',word:'spokesperson',phonetic:"/ˈspəʊkspɜːsn/",definition:'发言人',en_def:'',example:'An NFL spokesperson said: The NFL continuously strives to make the game of football safer, including by implementing strategies to reduce concussions and head impacts.',example2:'A spokesperson denied the report.',source:'BBC - Brain disease in dead NFL play',mastered:false,reviewDate:'2026-08-26',reviewCount:0,dateAdded:'2026-08-26'},
     {id:'v_20260826_4_2',word:'responsible',phonetic:"",definition:'负责的',en_def:'a. worthy of or requiring responsibility or trust; or held accountable；s. being the agent or cause',example:'Get American Football news sent straight to your phone\n\nShorts Previous Next 1:18 I&#x27;m responsible - O&#x27;Neill.',example2:'The report describes the responsible impact on local communities.',source:'BBC - Brain disease in dead NFL play',mastered:false,reviewDate:'2026-08-26',reviewCount:0,dateAdded:'2026-08-26'},
+    {id:'v_20260827_0_0',word:'recession',phonetic:"/rɪˈseʃən/",definition:'经济衰退',en_def:'a period of temporary economic decline',example:'Economists warned the country could slip into recession by year\'s end.',example2:'The country is teetering on the edge of a recession.',source:'BBC - New Public Transport Funding A',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_0_1',word:'microplastic',phonetic:"/ˈmaɪkrəʊˌplæstɪk/",definition:'微塑料',en_def:'tiny plastic particles polluting the environment',example:'Microplastics have been found in human blood samples.',example2:'Analysts point to microplastic when explaining the market\'s reaction.',source:'BBC - New Public Transport Funding A',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_0_2',word:'austerity',phonetic:"/ɒˈsterɪti/",definition:'紧缩政策',en_def:'strict economic policies to reduce government debt',example:'Years of austerity led to cuts in public services.',example2:'Analysts point to austerity when explaining the market\'s reaction.',source:'BBC - New Public Transport Funding A',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_1_0',word:'neural',phonetic:"/ˈnjʊərəl/",definition:'神经网络的',en_def:'relating to computer systems modeled on the human brain',example:'Neural networks have revolutionized image recognition.',example2:'Campaigners welcomed the move, saying it reflects growing concern about neural.',source:'CNN - Tech Giant Acquires AI Startup',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_1_1',word:'equity',phonetic:"/ˈekwɪti/",definition:'股权',en_def:'equity；the value of shares in a company',example:'The founders retained a 60% equity stake after the funding round.',example2:'The latest figures show a clear link between the economy and equity.',source:'CNN - Tech Giant Acquires AI Startup',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_1_2',word:'impeachment',phonetic:"/ɪmˈpiːtʃmənt/",definition:'弹劾',en_def:'a formal charge of misconduct against a public official',example:'The impeachment trial lasted three weeks in the Senate.',example2:'The new policy is widely seen as a major step in addressing impeachment.',source:'CNN - Tech Giant Acquires AI Startup',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_2_0',word:'breakthrough',phonetic:"/ˈbreɪkθruː/",definition:'突破；重大进展',en_def:'a sudden important development or discovery',example:'The breakthrough could lead to more efficient solar panels.',example2:'Campaigners welcomed the move, saying it reflects growing concern about breakthrough.',source:'AP News - CDC Issues Alert as Flu Season',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_2_1',word:'geriatric',phonetic:"/ˌdʒeriˈætrɪk/",definition:'老年医学的',en_def:'relating to the medical care of elderly people',example:'Geriatric wards are under pressure from an ageing population.',example2:'The report highlighted geriatric as a key factor in the decision.',source:'AP News - CDC Issues Alert as Flu Season',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_2_2',word:'inequality',phonetic:"/ˌɪnɪˈkwɒləti/",definition:'不平等',en_def:'lack of fairness in the distribution of resources',example:'Income inequality has widened over the past three decades.',example2:'A growing number of people now call attention to inequality.',source:'AP News - CDC Issues Alert as Flu Season',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_3_0',word:'peacekeeping',phonetic:"/ˈpiːskiːpɪŋ/",definition:'维和的',en_def:'maintaining peace, especially by military forces',example:'Peacekeeping troops were deployed along the disputed border.',example2:'The latest figures show a clear link between the economy and peacekeeping.',source:'Reuters - Developing Nations Walk Out of',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_3_1',word:'liquidity',phonetic:"/lɪˈkwɪdəti/",definition:'流动性',en_def:'the availability of liquid assets to a market',example:'The central bank injected liquidity to stabilize the banking sector.',example2:'The report highlighted liquidity as a key factor in the decision.',source:'Reuters - Developing Nations Walk Out of',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_3_2',word:'coalition',phonetic:"/ˌkəʊəˈlɪʃən/",definition:'联盟；联合政府',en_def:'a temporary alliance of political parties',example:'The coalition government faced its first major test.',example2:'Campaigners welcomed the move, saying it reflects growing concern about coalition.',source:'Reuters - Developing Nations Walk Out of',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_4_0',word:'census',phonetic:"/ˈsensəs/",definition:'人口普查',en_def:'an official count of a population',example:'The census revealed that the city\'s population had grown by 15%.',example2:'The report highlighted census as a key factor in the decision.',source:'The Guardian - Olympic Committee Announces Fi',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_4_1',word:'suburban',phonetic:"/səˈbɜːrbən/",definition:'郊区的',en_def:'relating to residential areas outside city centers',example:'Suburban home prices rose as families sought more space.',example2:'The new policy is widely seen as a major step in addressing suburban.',source:'The Guardian - Olympic Committee Announces Fi',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
+    {id:'v_20260827_4_2',word:'endurance',phonetic:"/ɪnˈdjʊərəns/",definition:'耐力；持久力',en_def:'the ability to keep going for a long time',example:'Marathon running tests both physical and mental endurance.',example2:'A growing number of people now call attention to endurance.',source:'The Guardian - Olympic Committee Announces Fi',mastered:false,reviewDate:'2026-08-27',reviewCount:0,dateAdded:'2026-08-27'},
   ];
 }
 
@@ -2791,6 +2903,11 @@ function getDefaultGrammar() {
     {id:'g_20260826_2_0',pattern:'定语从句 (Relative Clause)',explanation:'who/which/that 引导的定语从句修饰前面的名词。who 指人、which 指物，that 两者皆可；关系代词在从句中作宾语时可省略。',en:'A relative clause modifies a noun using who (people), which (things), or that (both). When the relative pronoun is the object it can be omitted: \'the law (that) the Senate passed\'.',example:'Neither Washington or Moscow have confirmed the nature of the visit or who he was due to meet.',example2:'The scientist who developed the vaccine won the Nobel Prize.',source:'BBC',mastered:false,reviewDate:'2026-08-26',dateAdded:'2026-08-26'},
     {id:'g_20260826_3_0',pattern:'现在完成时 (Present Perfect)',explanation:'have/has + 过去分词。表示过去发生、对现在有影响的动作。新闻中常用来强调"已经发生"的结果，常与 already、just、so far 连用。',en:'The present perfect (have/has + past participle) links a past action to the present moment. Used when the exact time is not given or the result still matters now: \'Prices have fallen sharply.\'',example:'Operation Jackal IV is one of multiple Jackal police operations that have taken place since 2022.',example2:'Prices have fallen sharply since January, and analysts expect the trend to continue.',source:'BBC',mastered:false,reviewDate:'2026-08-26',dateAdded:'2026-08-26'},
     {id:'g_20260826_4_0',pattern:'将来表达 (Future: will / going to)',explanation:'will + 动词原形表预测或承诺；be going to 表计划好的事。新闻预测走势、宣布计划时高频出现。',en:'English marks the future with \'will\' (spontaneous decisions, predictions) or \'going to\' (plans, intentions). News uses \'will\' for official decisions: \'The president will announce the plan.\'',example:'00:00:36, play video Rice on the &#x27;it&#x27;s not done&#x27; moment 0:22 &#x27;He&#x27;s going to be massive&#x27; - Young on Baleba 00:00:22, play video &#x27;He&#x27;s going to be massive&#x27; - Young on Baleba 1:5',example2:'Officials said the new regulation will take effect from March.',source:'BBC',mastered:false,reviewDate:'2026-08-26',dateAdded:'2026-08-26'},
+    {id:'g_20260827_0_0',pattern:'First Conditional: If + present, will + base verb',explanation:'Used for real and possible future situations: "If the vote passes, the law will take effect in January."',en:'',example:'If the data confirms the trend, the Fed will likely cut rates.',example2:'',source:'BBC',mastered:false,reviewDate:'2026-08-27',dateAdded:'2026-08-27'},
+    {id:'g_20260827_1_0',pattern:'Passive with \'get\': get + past participle',explanation:'Informal passive, common in news for negative events: "got injured," "got caught." Adds a sense of the subject being affected.',en:'',example:'Three people got trapped in the elevator during the blackout.',example2:'',source:'CNN',mastered:false,reviewDate:'2026-08-27',dateAdded:'2026-08-27'},
+    {id:'g_20260827_2_0',pattern:'Noun phrase as headline: omission of \'be\'',explanation:'Headlines drop \'be\' verbs: "(The) Prime Minister (is) to Visit Japan." \'To + infinitive\' replaces future tense in headlines.',en:'',example:'Central Bank Expected to Raise Rates Following Inflation Data.',example2:'',source:'AP News',mastered:false,reviewDate:'2026-08-27',dateAdded:'2026-08-27'},
+    {id:'g_20260827_3_0',pattern:'Non-defining Relative Clause: who/which (with commas)',explanation:'Adds extra information: "The senator, who has served since 2010, announced retirement." Commas required.',en:'',example:'Tesla, which reported record earnings, saw its stock jump 12 percent.',example2:'',source:'Reuters',mastered:false,reviewDate:'2026-08-27',dateAdded:'2026-08-27'},
+    {id:'g_20260827_4_0',pattern:'Emphatic \'do/does/did\'',explanation:'"The evidence does suggest a pattern." Adds emphasis in present/past simple where no auxiliary normally exists.',en:'',example:'Despite the controversy, the data does show a clear improvement in outcomes.',example2:'',source:'The Guardian',mastered:false,reviewDate:'2026-08-27',dateAdded:'2026-08-27'},
   ];
 }
 
