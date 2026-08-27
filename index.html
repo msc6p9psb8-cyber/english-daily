@@ -6508,10 +6508,16 @@ function renderAll() {
   renderStatsPanel();
 }
 
-// Modal click-outside close
-document.getElementById('importModal').addEventListener('click', function(e){if(e.target===this)closeImportModal()});
-document.getElementById('wechatModal').addEventListener('click', function(e){if(e.target===this)closeWechatModal()});
-document.getElementById('detailModal').addEventListener('click', function(e){if(e.target===this)this.classList.remove('active')});
+// Modal click-outside close (defensive: skip if element missing)
+['importModal','wechatModal','detailModal'].forEach(function(id){
+  var el = document.getElementById(id);
+  if (el) {
+    var handler = id === 'detailModal'
+      ? function(e){if(e.target===this)this.classList.remove('active')}
+      : function(e){if(e.target===this){var fn=id==='importModal'?closeImportModal:closeWechatModal;if(fn)fn()}};
+    el.addEventListener('click', handler);
+  }
+});
 
 // --- Safe detail tag click handler (event delegation, avoids inline-onclick escaping bugs) ---
 window._detailData = {};
@@ -6650,10 +6656,14 @@ if (elDetail) elDetail.addEventListener('click', function(e) {
     function next() {
       if (i >= attempts.length) return Promise.resolve(null);
       var u = attempts[i++];
-      return fetch(u, { method: 'GET', redirect: 'follow' })
-        .then(function (r) { if (!r.ok) throw 0; return r.text(); })
-        .then(function (t) { var arr = parseRSS(t, source, country); return arr.length ? arr : null; })
-        .catch(function () { return next(); });
+      try {
+        return window.fetch(u, { method: 'GET', redirect: 'follow' })
+          .then(function (r) { if (!r.ok) throw 0; return r.text(); })
+          .then(function (t) { var arr = parseRSS(t, source, country); return arr.length ? arr : null; })
+          .catch(function () { return next(); });
+      } catch (e) {
+        return next();
+      }
     }
     return next();
   }
@@ -6757,13 +6767,20 @@ if (elDetail) elDetail.addEventListener('click', function(e) {
   window.__frontFetchInstalledDone = true;
 })();
 
-// Initialize
-// 自愈引擎：若今日内容缺失（自动化未跑/平台故障），页面自动生成今日 5 篇 —— 零依赖兜底
-selfHealToday();
-renderFrontLog();
-// 前端自动抓取：异步拉当日真实 RSS（不阻塞首屏，抓成功即覆盖今日，失败静默降级不造假）
-if (typeof fetchLiveNewsFrontend === 'function') fetchLiveNewsFrontend(false);
-renderAll();
+// Initialize — everything here is non-critical; even if one step fails,
+// state + renderAll always run so the page is never blank.
+try {
+  selfHealToday();
+} catch(e) { console.warn('[init] selfHealToday failed', e); }
+try {
+  renderFrontLog();
+} catch(e) {}
+try {
+  if (typeof fetchLiveNewsFrontend === 'function') fetchLiveNewsFrontend(false);
+} catch(e) {}
+try {
+  renderAll();
+} catch(e) { console.error('[init] renderAll failed', e); }
 </script>
 </body>
 </html>
