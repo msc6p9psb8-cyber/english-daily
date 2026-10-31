@@ -91,8 +91,12 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);lin
 
 /* 扩展阅读（原文 · 同主题延伸 · 拓展词汇） */
 .ext-read-wrap{margin-top:10px}
-.ext-read-box{margin-top:8px;padding:12px;background:var(--bg-soft,#f8fafc);border-radius:var(--radius-sm);border-left:3px solid var(--primary-light,#93c5fd)}
-.ext-read-row{margin-bottom:10px}
+.ext-read-box{margin-top:8px;padding:14px;background:var(--bg-soft,#f8fafc);border-radius:var(--radius-sm);border-left:3px solid var(--primary-light,#93c5fd)}
+.ext-read-body{margin-top:4px;line-height:1.9;font-size:14.5px;color:var(--gray-800,#1f2937);max-width:100%}
+.ext-read-body p{margin:0 0 12px 0}
+.ext-read-body p:last-child{margin-bottom:0}
+.ext-read-loading{font-size:12.5px;color:var(--gray-400);padding:6px 0}
+.ext-read-row{margin-bottom:12px}
 .ext-read-row:last-child{margin-bottom:0}
 .ext-read-row-title{font-size:12px;font-weight:600;color:var(--gray-500);margin-bottom:5px;letter-spacing:.3px}
 .ext-read-link{display:flex;gap:6px;align-items:flex-start;font-size:12.5px;color:var(--primary,#2563eb);text-decoration:none;line-height:1.5;margin-bottom:4px}
@@ -5702,17 +5706,76 @@ function findExtendedVocab(n, limit) {
 
 // 缓存：新闻面板一次要渲染上百条，避免重复计算
 const _extReadCache = {};
+
+// 解码抓取正文里的 HTML 实体（BBC 页面里常见 &#x27; / &amp; / &quot;）
+function decodeEntities(t) {
+  return String(t || '')
+    .replace(/&#x([0-9a-fA-F]+);/g, function (_, h) { return String.fromCharCode(parseInt(h, 16)); })
+    .replace(/&#(\d+);/g, function (_, d) { return String.fromCharCode(parseInt(d, 10)); })
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');   // &amp; 必须最后解，避免二次解码
+}
+
+// 正文 → 分段 HTML（段落之间用空行分隔），每段做词汇悬停标注
+function bodyToHtml(body) {
+  const paras = String(body || '')
+    .split(/\n{2,}/)
+    .map(function (p) { return p.replace(/\s+$/, '').trim(); })
+    .filter(Boolean);
+  if (!paras.length) return '';
+  return paras.map(function (p) { return '<p>' + annotateText(decodeEntities(p)) + '</p>'; }).join('');
+}
+
+// 按 id 找回新闻对象（懒加载正文时用）
+function findNewsById(id) {
+  const list = (typeof state !== 'undefined' && state.news) ? state.news : [];
+  for (let i = 0; i < list.length; i++) if (list[i] && list[i].id === id) return list[i];
+  return null;
+}
+
+// 展开/收起扩展阅读；正文全文在首次展开时才渲染（懒加载），
+// 避免上百篇文章的全文一次性塞进 DOM 导致页面卡顿。
+function toggleExtRead(btn, wrapId, newsId) {
+  const box = document.getElementById(wrapId);
+  if (!box) return;
+  const open = box.style.display === 'none' || box.style.display === '';
+  box.style.display = open ? 'block' : 'none';
+  if (open) {
+    const bodyEl = document.getElementById('ext-read-body-' + newsId);
+    if (bodyEl && bodyEl.getAttribute('data-lazy') === '1') {
+      const n = findNewsById(newsId);
+      if (n && n.body) {
+        bodyEl.innerHTML = bodyToHtml(n.body);
+        bodyEl.setAttribute('data-lazy', '0');
+      }
+    }
+  }
+  if (btn) btn.textContent = open ? '📖 收起全文与扩展阅读' : '📖 展开全文 · 扩展阅读';
+}
+
 function renderExtendedReading(n) {
   if (n && n.id && _extReadCache[n.id] !== undefined) return _extReadCache[n.id];
   const wrapId = 'ext-read-' + n.id;
+  const bodyId = 'ext-read-body-' + n.id;
   let h = '', hasAny = false;
 
-  // ① 原文全文
+  // ① 正文全文 —— 直接在当前页面读完整篇，无需点链接跳转
+  if (n.body && n.body.length > 60) {
+    hasAny = true;
+    h += '<div class="ext-read-row"><div class="ext-read-row-title">📖 正文全文（在本页直接阅读，词汇可悬停查释义）</div>';
+    h += '<div id="' + bodyId + '" class="ext-read-body" data-lazy="1"><div class="ext-read-loading">正在载入正文…</div></div></div>';
+  }
+
+  // ② 原文链接
   if (n.url) {
     hasAny = true;
-    h += '<div class="ext-read-row"><div class="ext-read-row-title">📄 原文全文</div>';
+    h += '<div class="ext-read-row"><div class="ext-read-row-title">📄 原文链接（需要对照原文时可点开）</div>';
     h += '<a class="ext-read-link" href="' + escapeHTML(n.url) + '" target="_blank" rel="noopener">';
-    h += '🔗 ' + escapeHTML(n.source || '打开原文') + '</a></div>';
+    h += '🔗 ' + escapeHTML(n.url) + '</a></div>';
   }
 
   // ② 同主题延伸
@@ -5746,10 +5809,10 @@ function renderExtendedReading(n) {
   }
 
   if (!hasAny) { if (n && n.id) _extReadCache[n.id] = ''; return ''; }
-  const btn = '🔗 扩展阅读（原文 · 同主题延伸 · 拓展词汇）';
+  const btn = '📖 展开全文 · 扩展阅读';
   const out = '<div class="ext-read-wrap">' +
-    '<button class="btn btn-sm btn-outline" style="color:var(--primary);border-color:var(--primary-light);min-height:32px" ' +
-    'onclick="var b=this,e=document.getElementById(\'' + wrapId + '\');if(e){var o=e.style.display===\'none\';e.style.display=o?\'block\':\'none\';b.textContent=o?\'🔗 收起扩展阅读\':\'' + btn + '\';}">' + btn + '</button>' +
+    '<button class="btn btn-sm btn-outline" style="color:var(--primary);border-color:var(--primary-light);min-height:34px" ' +
+    'onclick="toggleExtRead(this,\'' + wrapId + '\',\'' + n.id + '\')">' + btn + '</button>' +
     '<div id="' + wrapId + '" class="ext-read-box" style="display:none">' + h + '</div></div>';
   if (n && n.id) _extReadCache[n.id] = out;
   return out;
@@ -5773,13 +5836,10 @@ function renderNewsItem(n) {
   html += `<div class="news-title">${annotateText(n.title)}</div>`;
   // 导语摘要
   if (n.summary) html += `<div class="news-summary">${annotateText(n.summary)}</div>`;
-  // 正文全文（若服务端抓取时提供了 body）：默认折叠，点击展开，全文同样做词汇悬停标注
-  if (n.body && n.body.length > 60) {
-    const bodyId = 'news-body-' + n.id;
-    html += `<div class="news-body-wrap"><button class="btn btn-sm btn-outline" style="color:var(--primary);border-color:var(--primary-light);min-height:32px" onclick="document.getElementById('${bodyId}').style.display='block';this.style.display='none'">📖 展开全文（已从正文提取词汇）</button>`;
-    html += `<div id="${bodyId}" class="news-body" style="display:none;margin-top:8px;padding:12px;background:var(--bg-soft,#f8fafc);border-radius:var(--radius-sm);line-height:1.75;font-size:13.5px">${annotateText(n.body)}</div></div>`;
-  }
-  if (n.url) html += `<a href="${escapeHTML(n.url)}" target="_blank" class="news-url" style="color:var(--primary-light)">🔗 ${escapeHTML(n.url)}</a>`;
+
+  // 扩展阅读：点开即可在本页读完整篇正文（不需跳链接），另附原文链接 /
+  // 同主题延伸报道 / 同主题拓展词汇。正文首次展开时才懒加载渲染。
+  html += renderExtendedReading(n);
 
   // Vocab tags
   if (n.vocabPoints && n.vocabPoints.length > 0) {
@@ -5823,9 +5883,6 @@ function renderNewsItem(n) {
   html += `<button class="btn btn-sm btn-outline" style="color:var(--primary);border-color:var(--primary-light);min-height:36px" onclick="saveAllVocabFromNews('${n.id}')">💾 存入词汇本</button>`;
   html += `<button class="btn btn-sm btn-outline" style="color:var(--green);border-color:#bbf7d0;min-height:36px" onclick="saveAllGrammarFromNews('${n.id}')">💾 存入语法本</button>`;
   html += '</div>';
-
-  // 扩展阅读：原文 · 同主题延伸 · 同主题拓展词汇
-  html += renderExtendedReading(n);
 
   html += '</div>';
   return html;
